@@ -29,11 +29,18 @@ paint formulas and chemical mixtures. Chemical hazard data is automatically fetc
 pip3 install -r requirements.txt
 ```
 
-### 2. Seed the chemical cache (requires internet access)
+### 2. Build the chemical database (one-time, requires internet)
 ```bash
-python3 seed_chemicals.py
+python3 db_update.py
 ```
-This pre-loads ~25 common paint chemicals so lookups are instant during lab use.
+Downloads and loads ECHA C&L (~150k chemicals), NIOSH Pocket Guide (~700),
+and DOT Hazardous Materials Table (~3,200) into a local SQLite database.
+After this, lookups for any of those chemicals are **instant and offline**.
+
+For quick startup with just common paint chemicals:
+```bash
+python3 seed_chemicals.py   # ~25 chemicals, much faster
+```
 
 ### 3. Run the server
 ```bash
@@ -56,19 +63,28 @@ gunicorn run:app \
   --access-logfile logs/access.log
 ```
 
-The `--timeout 120` is important — PubChem lookups for new chemicals can take
-10–30 seconds the first time (results are cached after that).
+Run `python3 db_update.py` quarterly to refresh the chemical database from source.
 
 ## Data Sources
 
-| Data | Source |
-|------|--------|
-| Chemical identification (CAS, IUPAC name) | PubChem PUG REST API |
-| Physical/chemical properties | PubChem PUG REST API |
-| GHS hazard/precautionary statements | PubChem PUG View API |
-| Occupational exposure limits | PubChem / NIOSH Pocket Guide |
-| GHS classification rules | UN GHS Rev 9 / OSHA HazCom 2012 |
-| Transport information | DOT 49 CFR / TDG (template — must verify) |
+### Local Database (offline, instant)
+| Source | # Chemicals | Data Provided |
+|--------|-------------|---------------|
+| [ECHA C&L Inventory](https://echa.europa.eu/information-on-chemicals/cl-inventory-database) | ~150,000 | GHS classifications, H/P codes, signal words |
+| [NIOSH Pocket Guide](https://www.cdc.gov/niosh/npg/) | ~700 | OSHA PEL, NIOSH REL, IDLH, physical properties |
+| [DOT HMT 49 CFR 172.101](https://www.phmsa.dot.gov) | ~3,200 | UN numbers, hazard class, packing group |
+
+### Online Fallback (requires internet)
+| Source | Data Provided |
+|--------|---------------|
+| [PubChem](https://pubchem.ncbi.nlm.nih.gov) | Physical properties, additional GHS data for unlisted chemicals |
+
+## Lookup Priority
+```
+1. In-memory cache (previous lookups this session)
+2. Local master database  ← ECHA + NIOSH + DOT, works offline
+3. PubChem API            ← fallback for chemicals not in local DB
+```
 
 ## Important Disclaimer
 
@@ -82,15 +98,24 @@ in particular requires verification by a qualified dangerous goods specialist.
 ```
 ├── run.py                  # Flask entry point
 ├── requirements.txt
-├── seed_chemicals.py       # Pre-populate cache for common chemicals
+├── db_update.py            # Download + load ECHA / NIOSH / DOT databases
+├── seed_chemicals.py       # Quick seed for common paint chemicals
+├── db/
+│   ├── schema.py           # Master DB schema + lookup helpers
+│   ├── chemicals_master.db # Built by db_update.py (not committed to git)
+│   ├── downloads/          # Raw downloaded source files (cached)
+│   └── parsers/
+│       ├── echa_parser.py  # ECHA C&L CSV parser
+│       ├── niosh_parser.py # NIOSH Pocket Guide JSON parser
+│       └── dot_parser.py   # DOT HMT CSV parser
 └── app/
     ├── __init__.py
     ├── routes.py           # URL handlers + AJAX lookup endpoint
-    ├── pubchem.py          # PubChem API client + SQLite cache
-    ├── hazard_data.py      # H/P statement dictionaries, pictogram mapping
+    ├── pubchem.py          # Lookup: cache → master DB → PubChem API
+    ├── hazard_data.py      # H/P statement text, pictogram mapping
     ├── sds_generator.py    # 16-section GHS SDS builder
     ├── pdf_generator.py    # ReportLab PDF generation
-    ├── cache/              # SQLite cache (auto-created)
+    ├── cache/              # Session lookup cache (auto-created)
     ├── templates/
     └── static/
 ```

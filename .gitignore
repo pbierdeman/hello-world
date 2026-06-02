@@ -9,6 +9,8 @@ venv/
 env/
 instance/
 app/cache/*.db
+db/chemicals_master.db
+db/downloads/
 *.pdf
 *.log
 .DS_Store
