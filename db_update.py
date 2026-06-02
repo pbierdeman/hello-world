@@ -2,12 +2,16 @@
 Chemical Master Database — download and load script.
 
 Usage:
-    python3 db_update.py                  # download and load all sources
+    python3 db_update.py                  # load bundled data + download all sources
+    python3 db_update.py --source bundled # load only bundled paint chemicals (no internet)
     python3 db_update.py --source niosh   # load only NIOSH
     python3 db_update.py --source dot     # load only DOT HMT
     python3 db_update.py --source echa    # load only ECHA C&L
     python3 db_update.py --no-download    # skip downloading, use existing files
     python3 db_update.py --stats          # show database stats only
+
+The 'bundled' source is always loaded first — it requires no internet and provides
+~35 common paint/coating chemicals immediately (solvents, pigments, extenders).
 
 Run quarterly to stay current with source updates.
 
@@ -34,6 +38,12 @@ DOWNLOAD_DIR = os.path.join(os.path.dirname(__file__), 'db', 'downloads')
 
 # ── Source definitions ────────────────────────────────────────────────────────
 SOURCES = {
+    'bundled': {
+        'description': 'Bundled paint/coating chemicals — ~35 common chemicals, no download',
+        'inline': True,                   # no file download needed
+        'loader': 'db.parsers.bundled_parser',
+        'loader_fn': 'load',
+    },
     'niosh': {
         'description': 'NIOSH Pocket Guide to Chemical Hazards (~700 chemicals)',
         'url': 'https://www.cdc.gov/niosh/npg/all.json',
@@ -141,6 +151,13 @@ def run_source(key, skip_download=False):
     print(f"Source: {src['description']}")
     print(f"{'='*60}")
 
+    # Inline sources (bundled) have no file to download
+    if src.get('inline'):
+        import importlib
+        mod = importlib.import_module(src['loader'])
+        fn  = getattr(mod, src['loader_fn'])
+        return fn(db_path=DB_PATH)
+
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     dl_path = os.path.join(DOWNLOAD_DIR, src['filename'])
     data_path = dl_path
@@ -191,7 +208,7 @@ def main():
         description='Download and load chemical databases into chemicals_master.db'
     )
     parser.add_argument('--source', choices=list(SOURCES.keys()),
-                        help='Load only one source (default: all)')
+                        help='Load only one source (default: bundled + all download sources)')
     parser.add_argument('--no-download', action='store_true',
                         help='Skip downloading; use files already in db/downloads/')
     parser.add_argument('--stats', action='store_true',
@@ -213,11 +230,17 @@ def main():
                 print(f"  {imp['source']:<35} {imp['rows_loaded']:>8,} rows  {imp['imported_at'][:10]}")
         return
 
-    targets = [args.source] if args.source else list(SOURCES.keys())
-    total_loaded = 0
+    if args.source:
+        targets = [args.source]
+    else:
+        # Always load bundled first, then the download-based sources
+        targets = ['bundled'] + [k for k in SOURCES if k != 'bundled']
 
+    total_loaded = 0
     for key in targets:
-        n = run_source(key, skip_download=args.no_download)
+        # --no-download only skips file-based sources, not inline ones
+        skip = args.no_download and not SOURCES[key].get('inline')
+        n = run_source(key, skip_download=skip)
         total_loaded += (n or 0)
 
     print(f"\nDone. Total records processed: {total_loaded:,}")
