@@ -29,17 +29,34 @@ paint formulas and chemical mixtures. Chemical hazard data is automatically fetc
 pip3 install -r requirements.txt
 ```
 
-### 2. Build the chemical database (one-time, requires internet)
+### 2. Build the chemical database
+
+**a) Load the bundled chemicals (instant, no internet):**
 ```bash
 python3 db_update.py
 ```
-Downloads and loads ECHA C&L (~150k chemicals), NIOSH Pocket Guide (~700),
-and DOT Hazardous Materials Table (~3,200) into a local SQLite database.
-After this, lookups for any of those chemicals are **instant and offline**.
+Loads ~35 common paint/coating chemicals (solvents, pigments, extenders) that are
+bundled with the app. It also *attempts* the ECHA / NIOSH / DOT downloads, but those
+government sources frequently block automated access — the bundled set guarantees a
+working app regardless.
 
-For quick startup with just common paint chemicals:
+**b) Grow to thousands of chemicals from PubChem (recommended, requires internet):**
 ```bash
-python3 seed_chemicals.py   # ~25 chemicals, much faster
+python3 db_update.py --source pubchem
+```
+Pages through PubChem's public **GHS Classification** index — tens of thousands of
+chemicals with H-codes, signal words, and P-codes — and resolves CAS numbers. This
+takes several minutes (it makes many rate-limited API calls), so it is **opt-in**.
+
+For a quick partial load to try it out:
+```bash
+python3 db_update.py --source pubchem --max-pages 5
+```
+
+After loading, lookups for any stored chemical are **instant and offline**.
+Check what you have at any time:
+```bash
+python3 db_update.py --stats
 ```
 
 ### 3. Run the server
@@ -70,9 +87,15 @@ Run `python3 db_update.py` quarterly to refresh the chemical database from sourc
 ### Local Database (offline, instant)
 | Source | # Chemicals | Data Provided |
 |--------|-------------|---------------|
-| [ECHA C&L Inventory](https://echa.europa.eu/information-on-chemicals/cl-inventory-database) | ~150,000 | GHS classifications, H/P codes, signal words |
+| Bundled dataset | ~35 | Curated paint/coating chemicals — full GHS + OEL + transport, no download |
+| [PubChem GHS Classification](https://pubchem.ncbi.nlm.nih.gov) | tens of thousands | GHS H/P codes, signal words, CAS numbers (`--source pubchem`) |
 | [NIOSH Pocket Guide](https://www.cdc.gov/niosh/npg/) | ~700 | OSHA PEL, NIOSH REL, IDLH, physical properties |
 | [DOT HMT 49 CFR 172.101](https://www.phmsa.dot.gov) | ~3,200 | UN numbers, hazard class, packing group |
+| [ECHA C&L Inventory](https://echa.europa.eu/information-on-chemicals/cl-inventory-database) | ~150,000 | GHS classifications, H/P codes, signal words |
+
+> **Note:** ECHA, NIOSH, and DOT publish their bulk files behind portals that block
+> automated downloads. The **bundled** dataset works with zero setup, and
+> **`--source pubchem`** is the recommended way to reach thousands of chemicals.
 
 ### Online Fallback (requires internet)
 | Source | Data Provided |
@@ -105,9 +128,11 @@ in particular requires verification by a qualified dangerous goods specialist.
 │   ├── chemicals_master.db # Built by db_update.py (not committed to git)
 │   ├── downloads/          # Raw downloaded source files (cached)
 │   └── parsers/
-│       ├── echa_parser.py  # ECHA C&L CSV parser
-│       ├── niosh_parser.py # NIOSH Pocket Guide JSON parser
-│       └── dot_parser.py   # DOT HMT CSV parser
+│       ├── bundled_parser.py # ~35 curated paint chemicals (no download)
+│       ├── pubchem_bulk.py   # Bulk loader: PubChem GHS index (thousands)
+│       ├── echa_parser.py    # ECHA C&L CSV parser
+│       ├── niosh_parser.py   # NIOSH Pocket Guide JSON parser
+│       └── dot_parser.py     # DOT HMT CSV parser
 └── app/
     ├── __init__.py
     ├── routes.py           # URL handlers + AJAX lookup endpoint

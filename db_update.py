@@ -2,16 +2,24 @@
 Chemical Master Database — download and load script.
 
 Usage:
-    python3 db_update.py                  # load bundled data + download all sources
-    python3 db_update.py --source bundled # load only bundled paint chemicals (no internet)
-    python3 db_update.py --source niosh   # load only NIOSH
-    python3 db_update.py --source dot     # load only DOT HMT
-    python3 db_update.py --source echa    # load only ECHA C&L
-    python3 db_update.py --no-download    # skip downloading, use existing files
-    python3 db_update.py --stats          # show database stats only
+    python3 db_update.py                   # load bundled data + download all sources
+    python3 db_update.py --source bundled  # load only bundled paint chemicals (no internet)
+    python3 db_update.py --source pubchem  # bulk-load THOUSANDS from PubChem GHS index
+    python3 db_update.py --source pubchem --max-pages 5   # quick partial PubChem load
+    python3 db_update.py --source niosh    # load only NIOSH
+    python3 db_update.py --source dot      # load only DOT HMT
+    python3 db_update.py --source echa     # load only ECHA C&L
+    python3 db_update.py --no-download     # skip downloading, use existing files
+    python3 db_update.py --stats           # show database stats only
 
 The 'bundled' source is always loaded first — it requires no internet and provides
 ~35 common paint/coating chemicals immediately (solvents, pigments, extenders).
+
+To grow the database to thousands of chemicals, run:
+    python3 db_update.py --source pubchem
+This pages through PubChem's public GHS Classification index (tens of thousands
+of chemicals with H-codes, signal words, and P-codes) and resolves CAS numbers.
+It is NOT run by default because it takes several minutes; run it once after setup.
 
 Run quarterly to stay current with source updates.
 
@@ -42,6 +50,12 @@ SOURCES = {
         'description': 'Bundled paint/coating chemicals — ~35 common chemicals, no download',
         'inline': True,                   # no file download needed
         'loader': 'db.parsers.bundled_parser',
+        'loader_fn': 'load',
+    },
+    'pubchem': {
+        'description': 'PubChem GHS Classification index — thousands of chemicals (API)',
+        'api': True,                      # loader fetches its own data over the API
+        'loader': 'db.parsers.pubchem_bulk',
         'loader_fn': 'load',
     },
     'niosh': {
@@ -145,11 +159,19 @@ def unzip_first(zip_path, out_dir, out_name):
     return out_path
 
 
-def run_source(key, skip_download=False):
+def run_source(key, skip_download=False, **extra):
     src = SOURCES[key]
     print(f"\n{'='*60}")
     print(f"Source: {src['description']}")
     print(f"{'='*60}")
+
+    # API sources (pubchem) fetch their own data; pass through extra options
+    if src.get('api'):
+        import importlib
+        mod = importlib.import_module(src['loader'])
+        fn  = getattr(mod, src['loader_fn'])
+        kwargs = {k: v for k, v in extra.items() if v is not None}
+        return fn(db_path=DB_PATH, **kwargs)
 
     # Inline sources (bundled) have no file to download
     if src.get('inline'):
@@ -211,6 +233,8 @@ def main():
                         help='Load only one source (default: bundled + all download sources)')
     parser.add_argument('--no-download', action='store_true',
                         help='Skip downloading; use files already in db/downloads/')
+    parser.add_argument('--max-pages', type=int, default=None,
+                        help='For --source pubchem: stop after N pages (quick partial load)')
     parser.add_argument('--stats', action='store_true',
                         help='Print database statistics and exit')
     args = parser.parse_args()
@@ -233,14 +257,18 @@ def main():
     if args.source:
         targets = [args.source]
     else:
-        # Always load bundled first, then the download-based sources
-        targets = ['bundled'] + [k for k in SOURCES if k != 'bundled']
+        # Default run: bundled first, then the file-download sources.
+        # 'pubchem' is opt-in (slow, makes many API calls) — request it explicitly.
+        targets = ['bundled'] + [k for k in SOURCES
+                                 if k not in ('bundled', 'pubchem')]
 
     total_loaded = 0
     for key in targets:
-        # --no-download only skips file-based sources, not inline ones
-        skip = args.no_download and not SOURCES[key].get('inline')
-        n = run_source(key, skip_download=skip)
+        # --no-download only skips file-based sources, not inline/api ones
+        src = SOURCES[key]
+        skip = args.no_download and not (src.get('inline') or src.get('api'))
+        extra = {'max_pages': args.max_pages} if src.get('api') else {}
+        n = run_source(key, skip_download=skip, **extra)
         total_loaded += (n or 0)
 
     print(f"\nDone. Total records processed: {total_loaded:,}")
