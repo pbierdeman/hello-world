@@ -53,6 +53,19 @@ For a quick partial load to try it out:
 python3 db_update.py --source pubchem --max-pages 5
 ```
 
+**c) Add occupational exposure limits — Section 8 data (optional):**
+```bash
+python3 db_update.py --source niosh
+```
+Pulls OSHA PEL, NIOSH REL, IDLH, and ACGIH TLV from PubChem's NIOSH/OSHA-sourced
+annotations and merges them into the chemicals you already loaded (it only fills
+empty fields, never overwriting curated data). Run it *after* `--source pubchem`.
+
+> The CDC's bulk NIOSH Pocket Guide file was removed in their 2024 site
+> reorganization, so this data now comes from PubChem's mirror of the same
+> authoritative NIOSH/OSHA values. If you have an official NPG JSON export on
+> disk, you can still load it with `--source niosh-file --no-download`.
+
 After loading, lookups for any stored chemical are **instant and offline**.
 Check what you have at any time:
 ```bash
@@ -89,7 +102,7 @@ Run `python3 db_update.py` quarterly to refresh the chemical database from sourc
 |--------|-------------|---------------|
 | Bundled dataset | ~35 | Curated paint/coating chemicals — full GHS + OEL + transport, no download |
 | [PubChem GHS Classification](https://pubchem.ncbi.nlm.nih.gov) | tens of thousands | GHS H/P codes, signal words, CAS numbers (`--source pubchem`) |
-| [NIOSH Pocket Guide](https://www.cdc.gov/niosh/npg/) | ~700 | OSHA PEL, NIOSH REL, IDLH, physical properties |
+| NIOSH/OSHA exposure limits (via PubChem) | ~hundreds | OSHA PEL, NIOSH REL, IDLH, ACGIH TLV (`--source niosh`) |
 | [DOT HMT 49 CFR 172.101](https://www.phmsa.dot.gov) | ~3,200 | UN numbers, hazard class, packing group |
 | [ECHA C&L Inventory](https://echa.europa.eu/information-on-chemicals/cl-inventory-database) | ~150,000 | GHS classifications, H/P codes, signal words |
 
@@ -130,8 +143,9 @@ in particular requires verification by a qualified dangerous goods specialist.
 │   └── parsers/
 │       ├── bundled_parser.py # ~35 curated paint chemicals (no download)
 │       ├── pubchem_bulk.py   # Bulk loader: PubChem GHS index (thousands)
+│       ├── niosh_pubchem.py  # Exposure limits (PEL/REL/IDLH/TLV) via PubChem
 │       ├── echa_parser.py    # ECHA C&L CSV parser
-│       ├── niosh_parser.py   # NIOSH Pocket Guide JSON parser
+│       ├── niosh_parser.py   # NIOSH Pocket Guide JSON (manual official file)
 │       └── dot_parser.py     # DOT HMT CSV parser
 └── app/
     ├── __init__.py

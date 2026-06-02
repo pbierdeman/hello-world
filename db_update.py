@@ -59,12 +59,24 @@ SOURCES = {
         'loader_fn': 'load',
     },
     'niosh': {
-        'description': 'NIOSH Pocket Guide to Chemical Hazards (~700 chemicals)',
-        'url': 'https://www.cdc.gov/niosh/npg/all.json',
+        'description': 'NIOSH/OSHA occupational exposure limits — PEL/REL/IDLH/TLV (API)',
+        'api': True,                      # CDC bulk file is gone; pull from PubChem instead
+        'loader': 'db.parsers.niosh_pubchem',
+        'loader_fn': 'load',
+    },
+    'niosh-file': {
+        'description': 'NIOSH Pocket Guide — load a manually downloaded official JSON file',
+        'url': None,                      # no working auto-download; user supplies the file
         'filename': 'niosh_npg.json',
         'loader': 'db.parsers.niosh_parser',
         'loader_fn': 'load',
         'file_arg': 'json_path',
+        'note': (
+            'The CDC bulk NIOSH file is no longer auto-downloadable.\n'
+            'For the official data, prefer:  python3 db_update.py --source niosh\n'
+            'Or, if you have an official NPG JSON export, save it to:\n'
+            '  db/downloads/niosh_npg.json   and run this source with --no-download.'
+        ),
     },
     'dot': {
         'description': 'US DOT Hazardous Materials Table 49 CFR 172.101',
@@ -257,10 +269,13 @@ def main():
     if args.source:
         targets = [args.source]
     else:
-        # Default run: bundled first, then the file-download sources.
-        # 'pubchem' is opt-in (slow, makes many API calls) — request it explicitly.
-        targets = ['bundled'] + [k for k in SOURCES
-                                 if k not in ('bundled', 'pubchem')]
+        # Default run: bundled first (instant), then file-download sources that
+        # actually have an auto-download URL. API sources (pubchem, niosh) are
+        # opt-in because they make many rate-limited calls and take minutes.
+        file_sources = [k for k, s in SOURCES.items()
+                        if k != 'bundled' and not s.get('api')
+                        and not s.get('inline') and s.get('url')]
+        targets = ['bundled'] + file_sources
 
     total_loaded = 0
     for key in targets:
