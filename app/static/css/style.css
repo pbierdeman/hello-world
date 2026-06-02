@@ -1,22 +1,52 @@
-::root {
-  --navy: #1a3a5c;
-  --navy-mid: #2c5f8a;
+:root {
+  --navy:       #1a3a5c;
+  --navy-mid:   #2c5f8a;
   --navy-light: #d6e8f7;
 }
 
+/* ── Brand colours ─────────────────────────────────────── */
 .bg-navy   { background-color: var(--navy) !important; }
 .text-navy { color: var(--navy) !important; }
-.btn-navy  {
+
+.btn-navy {
   background-color: var(--navy);
   border-color: var(--navy);
   color: #fff;
+  font-weight: 600;
 }
-.btn-navy:hover {
+.btn-navy:hover,
+.btn-navy:focus {
   background-color: var(--navy-mid);
   border-color: var(--navy-mid);
   color: #fff;
 }
+.btn-navy:focus {
+  box-shadow: 0 0 0 .25rem rgba(44, 95, 138, .45);
+}
 
+/* ── Global button improvements ────────────────────────── */
+.btn {
+  font-weight: 500;
+  letter-spacing: .01em;
+}
+
+/* Make Bootstrap warning readable (dark text on yellow is Bootstrap default — good) */
+.btn-warning {
+  color: #1a1a1a;
+}
+.btn-warning:hover,
+.btn-warning:focus {
+  color: #1a1a1a;
+  background-color: #e0a800;
+  border-color: #d39e00;
+}
+
+/* Ensure primary button has enough contrast in small size */
+.btn-sm.btn-primary {
+  font-weight: 600;
+}
+
+/* ── Layout ────────────────────────────────────────────── */
 body {
   background-color: #f8f9fa;
 }
@@ -29,7 +59,7 @@ body {
   letter-spacing: .03em;
 }
 
-/* Lookup result badges */
+/* ── Lookup result badges ───────────────────────────────── */
 .badge-danger-sm {
   display: inline-block;
   padding: 1px 5px;
@@ -43,13 +73,13 @@ body {
   display: inline-block;
   padding: 1px 5px;
   border-radius: 3px;
-  background: #f39c12;
+  background: #b45309;
   color: #fff;
   font-size: .7rem;
   margin-right: 2px;
 }
 
-/* Component table */
+/* ── Component table ────────────────────────────────────── */
 #components-table th {
   font-size: .82rem;
   vertical-align: middle;
@@ -62,13 +92,13 @@ body {
   font-size: .85rem;
 }
 
-/* Percentage total colour */
+/* ── Percentage total colour ────────────────────────────── */
 .pct-over   { color: #c0392b; font-weight: bold; }
-.pct-ok     { color: #27ae60; font-weight: bold; }
-.pct-under  { color: #e67e22; }
+.pct-ok     { color: #146c43; font-weight: bold; }
+.pct-under  { color: #b45309; }
 
-/* Spinner overlay */
+/* ── Spinner / loading state ────────────────────────────── */
 .lookup-btn.loading {
   pointer-events: none;
-  opacity: .7;
+  opacity: .75;
 }
