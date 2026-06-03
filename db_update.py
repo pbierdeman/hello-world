@@ -177,7 +177,8 @@ def run_source(key, skip_download=False, **extra):
     print(f"Source: {src['description']}")
     print(f"{'='*60}")
 
-    # API sources (pubchem) fetch their own data; pass through extra options
+    # API sources (pubchem, niosh) fetch their own data; pass through extra options.
+    # no_download is meaningful for pubchem (load from local cache file).
     if src.get('api'):
         import importlib
         mod = importlib.import_module(src['loader'])
@@ -279,10 +280,16 @@ def main():
 
     total_loaded = 0
     for key in targets:
-        # --no-download only skips file-based sources, not inline/api ones
         src = SOURCES[key]
+        # For file-based sources: --no-download skips the network fetch.
+        # For API sources (pubchem): pass no_download so they load from cache.
         skip = args.no_download and not (src.get('inline') or src.get('api'))
-        extra = {'max_pages': args.max_pages} if src.get('api') else {}
+        extra = {}
+        if src.get('api'):
+            if args.max_pages is not None:
+                extra['max_pages'] = args.max_pages
+            if args.no_download:
+                extra['no_download'] = True
         n = run_source(key, skip_download=skip, **extra)
         total_loaded += (n or 0)
 
