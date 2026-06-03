@@ -34,8 +34,8 @@ from urllib.parse import quote
 from db.parsers.pubchem_bulk import _get_json, _resolve_cas
 
 ANNOTATION_URL = (
-    'https://pubchem.ncbi.nlm.nih.gov/rest/pug/annotations/heading/JSON'
-    '?heading={heading}&page={page}'
+    'https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/annotations/heading/'
+    '{heading}/JSON?page={page}'
 )
 
 # PubChem annotation headings → which DB columns each one feeds.

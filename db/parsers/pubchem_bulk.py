@@ -36,8 +36,8 @@ from datetime import datetime, timezone
 CACHE_FILE = os.path.join(os.path.dirname(__file__), '..', 'downloads', 'pubchem_ghs.json.gz')
 
 ANNOTATION_URL = (
-    'https://pubchem.ncbi.nlm.nih.gov/rest/pug/annotations/heading/JSON'
-    '?heading=GHS+Classification&page={page}'
+    'https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/annotations/heading/'
+    'GHS%20Classification/JSON?page={page}'
 )
 SYNONYM_URL = (
     'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cids}/synonyms/JSON'
