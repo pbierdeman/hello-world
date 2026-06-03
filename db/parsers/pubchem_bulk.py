@@ -80,10 +80,12 @@ class _RateLimiter:
                                headers={'User-Agent': 'SDS-Generator/1.0'})
             if resp.status_code == 404:
                 return None
-            resp.raise_for_status()
+            if not resp.ok:
+                print(f"\n  HTTP {resp.status_code} from PubChem: {resp.text[:200]}")
+                return None
             return resp.json()
         except Exception as exc:
-            print(f"\n  request error: {exc}")
+            print(f"\n  Connection error: {type(exc).__name__}: {exc}")
             return None
 
 
@@ -130,6 +132,10 @@ def _fetch_page(page, rl, session):
     """Fetch one annotation page. Returns (records_dict_by_cid, total_pages)."""
     data = rl.get(session, ANNOTATION_URL.format(page=page))
     if not data:
+        return {}, 0
+    if 'Annotations' not in data:
+        preview = json.dumps(data)[:300]
+        print(f"\n  Unexpected response structure from PubChem: {preview}")
         return {}, 0
     block = data.get('Annotations', {})
     total = block.get('TotalPages', 0)
