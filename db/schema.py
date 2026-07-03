@@ -161,6 +161,41 @@ def lookup_by_name(name):
     return row
 
 
+def search_names(prefix, limit=10):
+    """Prefix search across synonyms and common names for autocomplete.
+
+    Returns a list of {name, cas, common_name} dicts, best (shortest) matches
+    first. Uses the case-insensitive index on chemical_synonyms.name and
+    chemicals.common_name, so a prefix LIKE is index-backed and fast.
+    """
+    prefix = (prefix or '').strip()
+    if len(prefix) < 2:
+        return []
+
+    conn = get_conn()
+    like = prefix + '%'
+    rows = conn.execute('''
+        SELECT name, cas_number, common_name FROM (
+            SELECT s.name AS name, s.cas_number AS cas_number, c.common_name AS common_name
+              FROM chemical_synonyms s
+              JOIN chemicals c ON c.cas_number = s.cas_number
+             WHERE s.name LIKE ? COLLATE NOCASE
+            UNION
+            SELECT common_name AS name, cas_number, common_name
+              FROM chemicals
+             WHERE common_name LIKE ? COLLATE NOCASE
+        )
+        GROUP BY cas_number
+        ORDER BY length(name), name COLLATE NOCASE
+        LIMIT ?
+    ''', (like, like, limit)).fetchall()
+    conn.close()
+    return [
+        {'name': r['name'], 'cas': r['cas_number'], 'common_name': r['common_name']}
+        for r in rows
+    ]
+
+
 def row_to_dict(row):
     """Convert a sqlite3.Row to a plain dict, decoding JSON fields."""
     if row is None:

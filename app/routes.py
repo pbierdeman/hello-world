@@ -4,8 +4,28 @@ from flask import Blueprint, render_template, request, send_file, jsonify
 from .pubchem import lookup_chemical
 from .sds_generator import build_sds, COUNTRIES
 from .pdf_generator import generate_pdf
+from .verify import run_checks
 
 main = Blueprint('main', __name__)
+
+
+def _lookup_components(form):
+    """Look up every component in a submitted formula form.
+
+    Uses the CAS number if provided, otherwise the chemical name.
+    Returns a list of lookup-result dicts aligned with the form's chem_name rows.
+    """
+    names = form.getlist('chem_name')
+    cas_list = form.getlist('chem_cas')
+    lookups = []
+    for i, name in enumerate(names):
+        cas = cas_list[i].strip() if i < len(cas_list) else ''
+        identifier = cas if cas else name.strip()
+        if identifier:
+            lookups.append(lookup_chemical(identifier))
+        else:
+            lookups.append({'identifier': '', 'found': False, 'name': name})
+    return lookups
 
 
 @main.route('/')
@@ -63,15 +83,7 @@ def generate():
         )
 
     # Look up each component (use CAS if provided, else name)
-    lookups = []
-    cas_list = form.getlist('chem_cas')
-    for i, name in enumerate(names):
-        cas = cas_list[i].strip() if i < len(cas_list) else ''
-        identifier = cas if cas else name.strip()
-        if identifier:
-            lookups.append(lookup_chemical(identifier))
-        else:
-            lookups.append({'identifier': '', 'found': False, 'name': name})
+    lookups = _lookup_components(form)
 
     sds = build_sds(form, lookups)
     pdf_bytes = generate_pdf(sds)
@@ -86,3 +98,34 @@ def generate():
         as_attachment=True,
         download_name=filename,
     )
+
+
+@main.route('/api/suggest')
+def api_suggest():
+    """Autocomplete: return chemical name/CAS suggestions for a prefix."""
+    q = request.args.get('q', '').strip()
+    try:
+        limit = min(int(request.args.get('limit', 10)), 25)
+    except (ValueError, TypeError):
+        limit = 10
+    if len(q) < 2:
+        return jsonify([])
+    try:
+        from db.schema import search_names
+        return jsonify(search_names(q, limit))
+    except Exception:
+        return jsonify([])
+
+
+@main.route('/api/verify', methods=['POST'])
+def api_verify():
+    """Run the completeness checker on a submitted formula and return a report.
+
+    Accepts the same form encoding as /generate so the client can send
+    new FormData(form) before generating the PDF.
+    """
+    form = request.form
+    lookups = _lookup_components(form)
+    sds = build_sds(form, lookups)
+    report = run_checks(sds)
+    return jsonify(report)

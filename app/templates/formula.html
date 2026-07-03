@@ -156,6 +156,28 @@
   </div>
 </div>
 
+<!-- ── Verification modal ── -->
+<div class="modal fade" id="verify-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-navy text-white">
+        <h5 class="modal-title"><i class="bi bi-clipboard-check me-2"></i>SDS Verification</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="verify-summary" class="mb-3"></div>
+        <div id="verify-checks"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back to editing</button>
+        <button type="button" class="btn btn-navy" id="verify-generate-btn" disabled>
+          <i class="bi bi-file-earmark-pdf me-2"></i>Generate PDF
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Row template (hidden) -->
 <template id="row-template">
   <tr class="component-row">

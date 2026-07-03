@@ -1,12 +1,15 @@
 """ReportLab-based GHS SDS PDF generator."""
 
 import io
+import os
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     HRFlowable,
     KeepTogether,
@@ -16,6 +19,36 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+
+# ── Unicode fonts ─────────────────────────────────────────────────────────────
+# The built-in Helvetica cannot render the subscripts, degree signs, warning
+# glyphs, and accented (EU-language) characters used throughout the SDS text.
+# DejaVu Sans covers the full Latin range plus ₂ ° ⚠ – etc. We ship regular +
+# bold; there is no oblique face, so italic maps to regular.
+_FONTS_DIR = os.path.join(os.path.dirname(__file__), 'fonts')
+FONT = 'DejaVuSans'
+FONT_BOLD = 'DejaVuSans-Bold'
+FONT_ITALIC = 'DejaVuSans'       # no oblique face — fall back to regular
+FONT_BOLD_ITALIC = 'DejaVuSans-Bold'
+
+_fonts_registered = False
+
+
+def _register_fonts():
+    """Register the DejaVu Sans family once. Safe to call repeatedly."""
+    global _fonts_registered
+    if _fonts_registered:
+        return
+    pdfmetrics.registerFont(TTFont(FONT, os.path.join(_FONTS_DIR, 'DejaVuSans.ttf')))
+    pdfmetrics.registerFont(TTFont(FONT_BOLD, os.path.join(_FONTS_DIR, 'DejaVuSans-Bold.ttf')))
+    # Map the family so <b>/<i> markup inside Paragraphs resolves correctly.
+    pdfmetrics.registerFontFamily(
+        FONT, normal=FONT, bold=FONT_BOLD, italic=FONT_ITALIC, boldItalic=FONT_BOLD_ITALIC,
+    )
+    _fonts_registered = True
+
+
+_register_fonts()
 
 # ── Colour palette ────────────────────────────────────────────────────────────
 BLACK = colors.black
@@ -35,68 +68,68 @@ def _styles():
     return {
         'doc_title': ParagraphStyle(
             'doc_title',
-            fontSize=18, fontName='Helvetica-Bold',
+            fontSize=18, fontName=FONT_BOLD,
             textColor=WHITE, alignment=TA_CENTER, spaceAfter=2,
         ),
         'doc_subtitle': ParagraphStyle(
             'doc_subtitle',
-            fontSize=11, fontName='Helvetica',
+            fontSize=11, fontName=FONT,
             textColor=WHITE, alignment=TA_CENTER, spaceAfter=0,
         ),
         'product_name': ParagraphStyle(
             'product_name',
-            fontSize=14, fontName='Helvetica-Bold',
+            fontSize=14, fontName=FONT_BOLD,
             textColor=DARK_BLUE, spaceBefore=6, spaceAfter=2,
         ),
         'section_heading': ParagraphStyle(
             'section_heading',
-            fontSize=11, fontName='Helvetica-Bold',
+            fontSize=11, fontName=FONT_BOLD,
             textColor=WHITE, spaceBefore=0, spaceAfter=0,
             leftIndent=6,
         ),
         'body': ParagraphStyle(
             'body',
-            fontSize=9, fontName='Helvetica',
+            fontSize=9, fontName=FONT,
             textColor=BLACK, spaceBefore=2, spaceAfter=2,
             leading=13,
         ),
         'body_bold': ParagraphStyle(
             'body_bold',
-            fontSize=9, fontName='Helvetica-Bold',
+            fontSize=9, fontName=FONT_BOLD,
             textColor=BLACK, spaceBefore=2, spaceAfter=2,
         ),
         'small': ParagraphStyle(
             'small',
-            fontSize=8, fontName='Helvetica',
+            fontSize=8, fontName=FONT,
             textColor=GRAY, spaceBefore=1, spaceAfter=1,
             leading=11,
         ),
         'disclaimer': ParagraphStyle(
             'disclaimer',
-            fontSize=7.5, fontName='Helvetica-Bold',
+            fontSize=7.5, fontName=FONT_BOLD,
             textColor=colors.HexColor('#8b0000'),
             borderColor=RED, borderWidth=1, borderPadding=4,
             spaceBefore=4, spaceAfter=4, leading=11,
         ),
         'signal_danger': ParagraphStyle(
             'signal_danger',
-            fontSize=14, fontName='Helvetica-Bold',
+            fontSize=14, fontName=FONT_BOLD,
             textColor=WHITE, alignment=TA_CENTER,
         ),
         'signal_warning': ParagraphStyle(
             'signal_warning',
-            fontSize=14, fontName='Helvetica-Bold',
+            fontSize=14, fontName=FONT_BOLD,
             textColor=BLACK, alignment=TA_CENTER,
         ),
         'note': ParagraphStyle(
             'note',
-            fontSize=8, fontName='Helvetica-Oblique',
+            fontSize=8, fontName=FONT_ITALIC,
             textColor=GRAY, spaceBefore=2, spaceAfter=2,
             leading=11,
         ),
         'footer': ParagraphStyle(
             'footer',
-            fontSize=7, fontName='Helvetica',
+            fontSize=7, fontName=FONT,
             textColor=GRAY, alignment=TA_CENTER,
         ),
     }
@@ -111,7 +144,7 @@ def _page_template(canvas, doc, sds):
     canvas.setLineWidth(0.5)
     canvas.line(0.75 * inch, 0.55 * inch, w - 0.75 * inch, 0.55 * inch)
 
-    canvas.setFont('Helvetica', 7)
+    canvas.setFont(FONT, 7)
     canvas.setFillColor(GRAY)
     product = sds.get('product_name', '')
     rev = sds.get('revision_date', '')
