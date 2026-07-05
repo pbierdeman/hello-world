@@ -133,3 +133,19 @@ body {
 }
 .autocomplete-item .ac-name { color: var(--navy); font-weight: 600; }
 .autocomplete-item .ac-cas  { color: #666; font-size: .78rem; white-space: nowrap; }
+
+/* ── Import drop zone ───────────────────────────────────── */
+.drop-zone {
+  border: 2px dashed var(--navy-mid);
+  border-radius: .5rem;
+  background: #f8fbff;
+  transition: background .15s, border-color .15s;
+}
+.drop-zone.dragover {
+  background: var(--navy-light);
+  border-color: var(--navy);
+}
+.drop-zone.busy {
+  opacity: .6;
+  pointer-events: none;
+}

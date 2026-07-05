@@ -100,6 +100,27 @@ def generate():
     )
 
 
+@main.route('/api/import', methods=['POST'])
+def api_import():
+    """Parse an uploaded formula file or pasted text into component rows.
+
+    Accepts either a multipart 'file' upload or JSON {"text": "..."}.
+    Returns {components, warnings, source}. Never writes to any database.
+    """
+    from .importer import parse_upload, parse_text
+
+    if 'file' in request.files and request.files['file'].filename:
+        result = parse_upload(request.files['file'])
+    else:
+        payload = request.get_json(silent=True) or {}
+        text = payload.get('text') or request.form.get('text', '')
+        if not text.strip():
+            return jsonify({'components': [], 'warnings': ['Nothing to import.'],
+                            'source': 'text'}), 400
+        result = parse_text(text)
+    return jsonify(result)
+
+
 @main.route('/api/suggest')
 def api_suggest():
     """Autocomplete: return chemical name/CAS suggestions for a prefix."""

@@ -24,6 +24,39 @@
     </div>
     {% endif %}
 
+    <!-- ── Import formula ── -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-navy text-white fw-bold">
+        <i class="bi bi-upload me-2"></i>Import Formula
+        <span class="fw-normal small ms-2 opacity-75">(optional — fills the table below)</span>
+      </div>
+      <div class="card-body">
+        <div id="drop-zone" class="drop-zone text-center p-4 mb-2">
+          <i class="bi bi-file-earmark-arrow-up fs-2 text-navy"></i>
+          <div class="mt-2">
+            <strong>Drag &amp; drop</strong> an Excel, CSV, or PDF formula here,
+            or <button type="button" class="btn btn-link p-0 align-baseline" id="browse-btn">browse</button>.
+          </div>
+          <div class="small text-muted mt-1">.xlsx, .csv, .txt, .pdf — the file is parsed, never uploaded to a database.</div>
+          <input type="file" id="import-file" accept=".xlsx,.csv,.txt,.tsv,.pdf" hidden>
+        </div>
+        <div class="text-center small text-muted my-2">— or —</div>
+        <div>
+          <button type="button" class="btn btn-sm btn-outline-secondary mb-2" id="toggle-paste">
+            <i class="bi bi-clipboard me-1"></i>Paste rows from a spreadsheet
+          </button>
+          <div id="paste-area" style="display:none;">
+            <textarea id="paste-text" class="form-control mb-2" rows="4"
+                      placeholder="Chemical&#9;CAS&#9;%&#10;Toluene&#9;108-88-3&#9;40&#10;Acetone&#9;67-64-1&#9;60"></textarea>
+            <button type="button" class="btn btn-sm btn-primary" id="parse-paste-btn">
+              <i class="bi bi-check2 me-1"></i>Parse pasted rows
+            </button>
+          </div>
+        </div>
+        <div id="import-status" class="mt-2"></div>
+      </div>
+    </div>
+
     <form action="/generate" method="post" id="sds-form">
 
       <!-- ── Product info ── -->
@@ -210,4 +243,5 @@
 {% endblock %}
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/formula.js') }}"></script>
+<script src="{{ url_for('static', filename='js/import.js') }}"></script>
 {% endblock %}
