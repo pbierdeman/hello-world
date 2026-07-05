@@ -261,7 +261,55 @@ if (verifyGenBtn) {
   });
 }
 
-// Start with two blank rows
 addBtn.addEventListener('click', addRow);
-addRow();
-addRow();
+
+// ── Save to Library ──
+const saveLibBtn = document.getElementById('save-lib-btn');
+if (saveLibBtn) {
+  saveLibBtn.addEventListener('click', async () => {
+    const nameEl = document.querySelector('[name="product_name"]');
+    if (!nameEl.value.trim()) {
+      statusMsg.textContent = 'Enter a product name before saving.';
+      nameEl.focus();
+      return;
+    }
+    saveLibBtn.disabled = true;
+    const original = saveLibBtn.innerHTML;
+    saveLibBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving…';
+    try {
+      const resp = await fetch('/api/formulas', { method: 'POST', body: new FormData(form) });
+      const data = await resp.json();
+      statusMsg.textContent = resp.ok
+        ? `Saved "${nameEl.value.trim()}" as revision ${data.revision}.`
+        : (data.error || 'Save failed.');
+    } catch (err) {
+      statusMsg.textContent = 'Save failed. Check your connection.';
+    } finally {
+      saveLibBtn.disabled = false;
+      saveLibBtn.innerHTML = original;
+    }
+  });
+}
+
+// ── Initial rows: prefill from a saved formula, else two blank rows ──
+function seedRows() {
+  const el = document.getElementById('prefill-data');
+  if (el) {
+    let comps = [];
+    try { comps = JSON.parse(el.textContent) || []; } catch (e) { comps = []; }
+    if (comps.length) {
+      comps.forEach(c => {
+        addRow();
+        const row = tbody.lastElementChild;
+        row.querySelector('.chem-name').value = c.name || '';
+        row.querySelector('.chem-cas').value = c.cas || '';
+        if (c.pct) row.querySelector('.chem-pct').value = c.pct;
+      });
+      updateTotal();
+      return;
+    }
+  }
+  addRow();
+  addRow();
+}
+seedRows();

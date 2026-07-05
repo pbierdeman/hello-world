@@ -50,7 +50,7 @@ def build_sds(form_data, component_lookups):
         'product_name': form_data.get('product_name', 'Unknown Product'),
         'product_code': form_data.get('product_code', ''),
         'revision_date': date.today().isoformat(),
-        'version': '1.0',
+        'version': form_data.get('revision') or '1.0',
         'country': country,
         'country_info': country_info,
         'manufacturer': {

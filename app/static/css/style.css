@@ -23,6 +23,16 @@
 .btn-navy:focus {
   box-shadow: 0 0 0 .25rem rgba(44, 95, 138, .45);
 }
+.btn-outline-navy {
+  border-color: var(--navy);
+  color: var(--navy);
+  font-weight: 600;
+}
+.btn-outline-navy:hover,
+.btn-outline-navy:focus {
+  background-color: var(--navy);
+  color: #fff;
+}
 
 /* ── Global button improvements ────────────────────────── */
 .btn {

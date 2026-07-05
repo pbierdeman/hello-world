@@ -177,15 +177,23 @@
       </div>
 
       <!-- ── Submit ── -->
-      <div class="d-flex gap-3 align-items-center mb-5">
+      <div class="d-flex gap-3 align-items-center mb-5 flex-wrap">
         <button type="submit" class="btn btn-navy btn-lg px-5" id="generate-btn">
           <i class="bi bi-file-earmark-pdf me-2"></i>Generate SDS PDF
         </button>
-        <a href="/" class="btn btn-secondary btn-lg">Cancel</a>
+        <button type="button" class="btn btn-outline-navy btn-lg" id="save-lib-btn">
+          <i class="bi bi-save me-2"></i>Save to Library
+        </button>
+        <a href="/library" class="btn btn-secondary btn-lg">Library</a>
+        <a href="/" class="btn btn-link">Cancel</a>
         <span class="text-muted small ms-2" id="status-msg"></span>
       </div>
 
     </form>
+
+    {% if prefill_components %}
+    <script id="prefill-data" type="application/json">{{ prefill_components | tojson }}</script>
+    {% endif %}
   </div>
 </div>
 
